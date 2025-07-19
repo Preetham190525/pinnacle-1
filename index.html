@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🌐 AI Translator</title>
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(130deg, #000428, #004e92);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      padding: 40px 20px;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-size: 3rem;
+      background: linear-gradient(90deg, #00fff0, #ff00f0);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 30px;
+      animation: typewriter 3s steps(20), blink 0.5s step-end infinite alternate;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 2px solid #fff;
+      max-width: 100%;
+    }
+
+    @keyframes typewriter {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    @keyframes blink {
+      50% { border-color: transparent; }
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 25px;
+      padding: 30px;
+      width: 100%;
+      max-width: 500px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+      animation: fadeInUp 1s ease-out;
+      transition: transform 0.3s;
+    }
+
+    .container:hover {
+      transform: scale(1.02);
+    }
+
+    textarea, select {
+      width: 100%;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      backdrop-filter: blur(4px);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    textarea::placeholder {
+      color: #ccc;
+    }
+
+    textarea:focus, select:focus {
+      outline: none;
+      box-shadow: 0 0 5px #00ffff;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(135deg, #00ffff, #ff00ff);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #00ffff;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #00ccff, #cc00ff);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .error {
+      color: #ff4e4e;
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #00ffff;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌍 AI Translator</h1>
+  <div class="container">
+    <textarea id="inputText" rows="4" placeholder="💬 Enter text to translate..."></textarea>
+    <select id="sourceLang">
+      <option value="en">English</option>
+      <option value="hi">Hindi</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+    </select>
+    <select id="targetLang">
+      <option value="hi">Hindi</option>
+      <option value="en">English</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+    </select>
+    <button onclick="translateText()">✨ Translate Now</button>
+    <textarea id="outputText" rows="4" readonly placeholder="📝 Translated text will appear here..."></textarea>
+    <div id="errorMessage" class="error"></div>
+  </div>
+
+  <script>
+    const phrases = {
+      "en|hi|hello": "नमस्ते",
+      "en|hi|thank you": "धन्यवाद",
+      "en|hi|how are you": "आप कैसे हैं?",
+      "en|hi|good morning": "सुप्रभात",
+      "en|hi|good night": "शुभ रात्रि",
+      "en|hi|yes": "हाँ",
+      "en|hi|no": "नहीं",
+      "en|es|hello": "Hola",
+      "en|es|thank you": "Gracias",
+      "en|es|how are you": "¿Cómo estás?",
+      "en|es|good morning": "Buenos días",
+      "en|es|good night": "Buenas noches",
+      "en|fr|hello": "Bonjour",
+      "en|fr|thank you": "Merci",
+      "en|fr|how are you": "Comment ça va ?",
+      "en|fr|good night": "Bonne nuit",
+      "hi|en|नमस्ते": "Hello",
+      "hi|en|धन्यवाद": "Thank you",
+      "hi|en|आप कैसे हैं?": "How are you?",
+      "fr|en|bonjour": "Hello",
+      "fr|en|merci": "Thank you",
+      "es|en|hola": "Hello",
+      "es|en|gracias": "Thank you"
+    };
+
+    async function translateText() {
+      const inputText = document.getElementById("inputText").value.trim();
+      const sourceLang = document.getElementById("sourceLang").value;
+      const targetLang = document.getElementById("targetLang").value;
+      const outputText = document.getElementById("outputText");
+      const errorMessage = document.getElementById("errorMessage");
+
+      outputText.value = "";
+      errorMessage.textContent = "";
+
+      const key = `${sourceLang}|${targetLang}|${inputText.toLowerCase()}`;
+      if (phrases[key]) {
+        outputText.value = phrases[key];
+        return;
+      }
+
+      try {
+        const res = await fetch("https://translate.argosopentech.com/translate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            q: inputText,
+            source: sourceLang,
+            target: targetLang,
+            format: "text"
+          })
+        });
+
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        outputText.value = data.translatedText || "⚠️ No result returned.";
+      } catch (err) {
+        console.error(err);
+        errorMessage.textContent = "❌ Error: Unable to translate. Check your internet or try again later.";
+      }
+    }
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🌐 AI Translator</title>
+  <style>
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(130deg, #000428, #004e92);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: start;
+      padding: 40px 20px;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-size: 3rem;
+      background: linear-gradient(90deg, #00fff0, #ff00f0);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 30px;
+      animation: typewriter 3s steps(20), blink 0.5s step-end infinite alternate;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 2px solid #fff;
+      max-width: 100%;
+    }
+
+    @keyframes typewriter {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    @keyframes blink {
+      50% { border-color: transparent; }
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 25px;
+      padding: 30px;
+      width: 100%;
+      max-width: 500px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+      animation: fadeInUp 1s ease-out;
+      transition: transform 0.3s;
+    }
+
+    .container:hover {
+      transform: scale(1.02);
+    }
+
+    textarea, select {
+      width: 100%;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 12px;
+      border: none;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      backdrop-filter: blur(4px);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    textarea::placeholder {
+      color: #ccc;
+    }
+
+    textarea:focus, select:focus {
+      outline: none;
+      box-shadow: 0 0 5px #00ffff;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      color: #fff;
+      background: linear-gradient(135deg, #00ffff, #ff00ff);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #00ffff;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #00ccff, #cc00ff);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .error {
+      color: #ff4e4e;
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #00ffff;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌍 AI Translator</h1>
+  <div class="container">
+    <textarea id="inputText" rows="4" placeholder="💬 Enter text to translate..."></textarea>
+    <select id="sourceLang">
+      <option value="en">English</option>
+      <option value="hi">Hindi</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+    </select>
+    <select id="targetLang">
+      <option value="hi">Hindi</option>
+      <option value="en">English</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+    </select>
+    <button onclick="translateText()">✨ Translate Now</button>
+    <textarea id="outputText" rows="4" readonly placeholder="📝 Translated text will appear here..."></textarea>
+    <div id="errorMessage" class="error"></div>
+  </div>
+
+  <script>
+    const phrases = {
+      "en|hi|hello": "नमस्ते",
+      "en|hi|thank you": "धन्यवाद",
+      "en|hi|how are you": "आप कैसे हैं?",
+      "en|hi|good morning": "सुप्रभात",
+      "en|hi|good night": "शुभ रात्रि",
+      "en|hi|yes": "हाँ",
+      "en|hi|no": "नहीं",
+      "en|es|hello": "Hola",
+      "en|es|thank you": "Gracias",
+      "en|es|how are you": "¿Cómo estás?",
+      "en|es|good morning": "Buenos días",
+      "en|es|good night": "Buenas noches",
+      "en|fr|hello": "Bonjour",
+      "en|fr|thank you": "Merci",
+      "en|fr|how are you": "Comment ça va ?",
+      "en|fr|good night": "Bonne nuit",
+      "hi|en|नमस्ते": "Hello",
+      "hi|en|धन्यवाद": "Thank you",
+      "hi|en|आप कैसे हैं?": "How are you?",
+      "fr|en|bonjour": "Hello",
+      "fr|en|merci": "Thank you",
+      "es|en|hola": "Hello",
+      "es|en|gracias": "Thank you"
+    };
+
+    async function translateText() {
+      const inputText = document.getElementById("inputText").value.trim();
+      const sourceLang = document.getElementById("sourceLang").value;
+      const targetLang = document.getElementById("targetLang").value;
+      const outputText = document.getElementById("outputText");
+      const errorMessage = document.getElementById("errorMessage");
+
+      outputText.value = "";
+      errorMessage.textContent = "";
+
+      const key = `${sourceLang}|${targetLang}|${inputText.toLowerCase()}`;
+      if (phrases[key]) {
+        outputText.value = phrases[key];
+        return;
+      }
+
+      try {
+        const res = await fetch("https://translate.argosopentech.com/translate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            q: inputText,
+            source: sourceLang,
+            target: targetLang,
+            format: "text"
+          })
+        });
+
+        if (!res.ok) throw new Error("API error");
+        const data = await res.json();
+        outputText.value = data.translatedText || "⚠️ No result returned.";
+      } catch (err) {
+        console.error(err);
+        errorMessage.textContent = "❌ Error: Unable to translate. Check your internet or try again later.";
+      }
+    }
+  </script>
+</body>
+</html>
